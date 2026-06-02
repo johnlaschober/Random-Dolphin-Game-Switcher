@@ -5,32 +5,6 @@ automatically saving and loading savestates between switches.
 
 ---
 
-## Building
-
-### Prerequisites
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (only needed to BUILD — not needed to RUN)
-
-### Build a self-contained exe (recommended for distribution)
-
-```
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
-```
-
-The output exe will be in:
-```
-bin\Release\net8.0-windows\win-x64\publish\DolphinRoulette.exe
-```
-
-That single file is everything — send it to whoever needs it.
-
-### Run locally during development
-
-```
-dotnet run
-```
-
----
-
 ## Setup
 
 1. Open the app and click **⚙ Settings**
@@ -70,3 +44,30 @@ Play counts survive restarts (stored in `roulette_settings.json` next to the exe
   Dolphin to the foreground. Avoid clicking during the grace period.
 - Grace period (default 3 seconds) is the wait after sending a hotkey before
   killing/switching. Increase it on slower machines in Settings.
+
+
+## Building
+
+### Prerequisites
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (only needed to BUILD — not needed to RUN)
+
+### Build a self-contained exe (recommended for distribution)
+
+```
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+```
+
+The output exe will be in:
+```
+bin\Release\net8.0-windows\win-x64\publish\DolphinRoulette.exe
+```
+
+That single file is everything — send it to whoever needs it.
+
+### Run locally during development
+
+```
+dotnet run
+```
+
+---
