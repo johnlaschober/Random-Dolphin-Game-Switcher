@@ -16,6 +16,28 @@ automatically saving and loading savestates between switches.
 
 ---
 
+## Required Dolphin setup (one time)
+
+This app **double-buffers** Dolphin: while you play one game, it pre-boots the
+next game in a second hidden Dolphin instance so switching is near-instant. That
+requires the following Dolphin configuration — set these once:
+
+**Options → Configuration → Interface**
+- **Confirm on Stop** — **OFF**. A stop-confirmation dialog would block the
+  auto-switch.
+- **Pause on Focus Loss** — **ON**. The pre-booted (background) instance must
+  auto-pause so it makes no sound and doesn't steal CPU/GPU from the game you're
+  playing. It auto-resumes when the app brings it to the foreground at swap time.
+
+**Options → Configuration → GameCube**
+- **Memory card** → set both slots to **Memory Card** (the raw `.raw` card), not
+  GCI Folder. In practice this behaves better with two instances running.
+
+Dolphin must also allow a **second instance** to launch (the default — no extra
+setting, just confirm a second Dolphin window opens without a lock dialog).
+
+---
+
 ## Usage
 
 | Button | What it does |
@@ -38,21 +60,22 @@ Play counts survive restarts (stored in `roulette_settings.json` next to the exe
 
 ---
 
-## Recommended Dolphin settings
-
-In Dolphin: **Options → Configuration → Interface**, disable:
-
-- **Confirm on Stop** — prevents a dialog blocking the auto-switch
-- **Pause on Focus Loss** — prevents Dolphin pausing when the app briefly takes focus to send hotkeys
-
----
-
 ## Notes
 
-- Savestate hotkeys (F1 / Shift+F1) are sent via `SendInput` which briefly brings
-  Dolphin to the foreground. Avoid clicking during the grace period.
-- Dolphin grace period (default 500 ms) is the wait after sending a hotkey before
-  killing/switching. Increase it on slower machines in Settings.
+- Two Dolphin instances are live at once: the one you're playing (top-left) and a
+  **minimized**, paused, pre-booted buffer for the next game. The buffer boots
+  minimized so it never flashes on-screen; at the switch it restores into the
+  top-left and becomes the game you play. The app foregrounds whichever instance
+  it's sending hotkeys to. Avoid clicking during a switch.
+- A second Dolphin instance launches **minimized** in the taskbar while you play —
+  that's the buffer booting, not a glitch.
+- Savestate hotkeys (F1 / Shift+F1) are sent via `SendInput`, which requires the
+  target instance to be foreground.
+- Grace period (default 4500 ms) is how long a freshly-launched instance is given
+  to boot before its savestate is loaded. Increase it on slower machines in
+  Settings if switches load too early.
+- The **first** game of a session pays the full boot cost (no buffer exists yet);
+  every switch after that is hidden behind playtime.
 
 
 ## Building
