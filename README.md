@@ -7,7 +7,7 @@ automatically saving and loading savestates between switches.
 
 ## Setup
 
-1. Open the app and click **⚙ Settings**
+1. Open the app and click **Settings**
 2. Point **Dolphin.exe path** at your Dolphin installation
 3. Set **Savestate slot** — pick whichever slot you'll use (default: 1)
 4. Set your **Min/Max play time** in seconds
@@ -25,7 +25,7 @@ automatically saving and loading savestates between switches.
 | **▶ Start** | Begin the roulette |
 | **■ Stop** | Save current game state and stop |
 | **⏭ Skip** | Save current state and jump to the next game now |
-| **✓ Completed** | Mark current game as finished — removes it from rotation (no save) |
+| **Completed** | Mark current game as finished — removes it from rotation (no save) |
 
 ---
 
@@ -38,9 +38,18 @@ Play counts survive restarts (stored in `roulette_settings.json` next to the exe
 
 ---
 
+## Recommended Dolphin settings
+
+In Dolphin: **Options → Configuration → Interface**, disable:
+
+- **Confirm on Stop** — prevents a dialog blocking the auto-switch
+- **Pause on Focus Loss** — prevents Dolphin pausing when the app briefly takes focus to send hotkeys
+
+---
+
 ## Notes
 
-- Savestate hotkeys (F1 / Shift+F1) are sent via `SendKeys` which briefly brings
+- Savestate hotkeys (F1 / Shift+F1) are sent via `SendInput` which briefly brings
   Dolphin to the foreground. Avoid clicking during the grace period.
 - Dolphin grace period (default 500 ms) is the wait after sending a hotkey before
   killing/switching. Increase it on slower machines in Settings.

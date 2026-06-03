@@ -9,6 +9,7 @@ public class SettingsForm : Form
     private NumericUpDown _minNum = null!;
     private NumericUpDown _maxNum = null!;
     private NumericUpDown _graceNum = null!;
+    private CheckBox _showTimerChk = null!;
     private Button _browseBtn = null!;
     private Button _okBtn = null!;
     private Button _cancelBtn = null!;
@@ -23,7 +24,7 @@ public class SettingsForm : Form
     private void BuildUI()
     {
         Text = "Settings";
-        Size = new Size(480, 330);
+        Size = new Size(480, 370);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -39,7 +40,7 @@ public class SettingsForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(16),
             ColumnCount = 3,
-            RowCount = 6,
+            RowCount = 7,
             AutoSize = true,
         };
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
@@ -85,13 +86,26 @@ public class SettingsForm : Form
         layout.SetColumnSpan(_maxNum, 2);
 
         // Grace period
-        var graceLbl = Label("Dolphin grace period (ms)");
-        tip.SetToolTip(graceLbl, "Milliseconds to wait after sending a savestate hotkey.\nIncrease on slower machines if saves or loads are missed.");
+        var graceLbl = Label("Dolphin boot wait (ms)");
+        tip.SetToolTip(graceLbl, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 3000).");
         layout.Controls.Add(graceLbl, 0, 4);
-        _graceNum = DarkNumeric(0, 10000);
-        tip.SetToolTip(_graceNum, "Milliseconds to wait after sending a savestate hotkey.\nIncrease on slower machines if saves or loads are missed.");
+        _graceNum = DarkNumeric(0, 30000);
+        tip.SetToolTip(_graceNum, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 3000).");
         layout.Controls.Add(_graceNum, 1, 4);
         layout.SetColumnSpan(_graceNum, 2);
+
+        // Show timer
+        _showTimerChk = new CheckBox
+        {
+            Text = "Show next switch time in GUI",
+            AutoSize = true,
+            ForeColor = Color.FromArgb(180, 180, 180),
+            BackColor = Color.Transparent,
+            Margin = new Padding(0, 8, 0, 0),
+        };
+        tip.SetToolTip(_showTimerChk, "Show countdown timer and progress bar in the header while a game is running.");
+        layout.Controls.Add(_showTimerChk, 0, 5);
+        layout.SetColumnSpan(_showTimerChk, 3);
 
         // Buttons
         var btnPanel = new FlowLayoutPanel
@@ -120,6 +134,7 @@ public class SettingsForm : Form
         _minNum.Value = _settings.MinPlaySeconds;
         _maxNum.Value = _settings.MaxPlaySeconds;
         _graceNum.Value = _settings.GracePeriodMs;
+        _showTimerChk.Checked = _settings.ShowTimerInGui;
     }
 
     private void Save(object? s, EventArgs e)
@@ -135,6 +150,7 @@ public class SettingsForm : Form
         _settings.MinPlaySeconds = (int)_minNum.Value;
         _settings.MaxPlaySeconds = (int)_maxNum.Value;
         _settings.GracePeriodMs = (int)_graceNum.Value;
+        _settings.ShowTimerInGui = _showTimerChk.Checked;
         _settings.Save();
         DialogResult = DialogResult.OK;
         Close();

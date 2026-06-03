@@ -16,7 +16,8 @@ public class AppSettings
     public int SavestateSlot { get; set; } = 1;
     public int MinPlaySeconds { get; set; } = 10;
     public int MaxPlaySeconds { get; set; } = 200;
-    public int GracePeriodMs { get; set; } = 500;
+    public int GracePeriodMs { get; set; } = 3000;
+    public bool ShowTimerInGui { get; set; } = false;
     public List<GameEntry> Games { get; set; } = new();
 
     private static readonly string SettingsPath =

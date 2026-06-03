@@ -29,14 +29,14 @@ public class MainForm : Form
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         BuildUI();
         RefreshGameList();
-        UpdateButtonStates(running: false);
+        UpdateButtonStates(RouletteState.Stopped);
     }
 
     // ── UI Construction ───────────────────────────────────────────────
 
     private void BuildUI()
     {
-        Text = "🎮 Dolphin Roulette";
+        Text = "Dolphin Roulette";
         Size = new Size(820, 620);
         MinimumSize = new Size(700, 500);
         StartPosition = FormStartPosition.CenterScreen;
@@ -85,7 +85,6 @@ public class MainForm : Form
         };
 
         header.Controls.AddRange(new Control[] { _nowPlayingLabel, _timerLabel, _timerBar });
-        Controls.Add(header);
 
         // ── Main area ──────────────────────────────────────────────────
         var mainPanel = new TableLayoutPanel
@@ -97,6 +96,7 @@ public class MainForm : Form
         };
         mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 260));
         mainPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        mainPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         // ── Left: game list panel ──────────────────────────────────────
         var leftPanel = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0) };
@@ -165,11 +165,11 @@ public class MainForm : Form
         _startBtn    = AccentBtn("▶  Start",   Color.FromArgb(0, 140, 80));
         _stopBtn     = AccentBtn("■  Stop",    Color.FromArgb(160, 40, 40));
         _skipBtn     = AccentBtn("⏭  Skip",    Color.FromArgb(60, 90, 140));
-        _doneBtn     = AccentBtn("✓  Completed", Color.FromArgb(120, 80, 0));
+        _doneBtn     = AccentBtn("Completed", Color.FromArgb(120, 80, 0));
         _doneBtn.Width = 130;
-        _settingsBtn = AccentBtn("⚙  Settings", Color.FromArgb(55, 55, 65));
+        _settingsBtn = AccentBtn("Settings", Color.FromArgb(55, 55, 65));
 
-        _startBtn.Click    += StartRoulette;
+        _startBtn.Click    += HandleStartPauseResume;
         _stopBtn.Click     += StopRoulette;
         _skipBtn.Click     += (_, _) => _engine?.ForceSkip();
         _doneBtn.Click     += (_, _) => _engine?.MarkCurrentDone();
@@ -184,7 +184,8 @@ public class MainForm : Form
 
         mainPanel.Controls.Add(leftPanel, 0, 0);
         mainPanel.Controls.Add(rightPanel, 1, 0);
-        Controls.Add(mainPanel);
+        Controls.Add(mainPanel); // added first = index 0 = docked second (Fill takes remaining rect)
+        Controls.Add(header);    // added second = index 1 = docked first (Top claims 90px before Fill)
 
         // ── Countdown timer ────────────────────────────────────────────
         _countdownTimer = new System.Windows.Forms.Timer { Interval = 1000 };
@@ -192,6 +193,16 @@ public class MainForm : Form
     }
 
     // ── Event handlers ────────────────────────────────────────────────
+
+    private void HandleStartPauseResume(object? s, EventArgs e)
+    {
+        if (_engine == null || _engine.State == RouletteState.Stopped)
+            StartRoulette(s, e);
+        else if (_engine.State == RouletteState.Running)
+            PauseRoulette();
+        else if (_engine.State == RouletteState.Paused)
+            ResumeRoulette();
+    }
 
     private void StartRoulette(object? s, EventArgs e)
     {
@@ -205,19 +216,31 @@ public class MainForm : Form
 
         _engine = new RouletteEngine(_settings, AppendLog, OnEngineStateChanged);
         _engine.Start();
-        UpdateButtonStates(running: true);
+        UpdateButtonStates(RouletteState.Running);
         Log("▶  Roulette started.");
+    }
+
+    private void PauseRoulette()
+    {
+        _engine?.Pause();
+    }
+
+    private void ResumeRoulette()
+    {
+        _engine?.Resume();
+        Log("▶  Resuming…");
     }
 
     private async void StopRoulette(object? s, EventArgs e)
     {
         if (_engine == null) return;
-        Log("■  Stopping after saving current state…");
+        Log("■  Stopping — saving state and closing Dolphin…");
         _stopBtn.Enabled = false;
+        _startBtn.Enabled = false;
         await _engine.StopAsync();
         _engine = null;
         _countdownTimer.Stop();
-        UpdateButtonStates(running: false);
+        UpdateButtonStates(RouletteState.Stopped);
         Log("  Stopped.");
     }
 
@@ -228,11 +251,21 @@ public class MainForm : Form
         _totalSeconds = totalSeconds;
         _remainingSeconds = totalSeconds;
 
-        if (game != null && state == RouletteState.Running)
+        if (state == RouletteState.Running)
         {
-            _nowPlayingLabel.Text = game.Name;
-            _timerBar.Value = 100;
+            _nowPlayingLabel.Text = game!.Name;
+            if (_settings.ShowTimerInGui) _timerBar.Value = 100;
             _countdownTimer.Start();
+            UpdateButtonStates(RouletteState.Running);
+            RefreshGameList();
+        }
+        else if (state == RouletteState.Paused)
+        {
+            _nowPlayingLabel.Text = $"Paused — {game!.Name}";
+            _timerLabel.Text = "";
+            _timerBar.Value = 0;
+            _countdownTimer.Stop();
+            UpdateButtonStates(RouletteState.Paused);
             RefreshGameList();
         }
         else
@@ -241,7 +274,7 @@ public class MainForm : Form
             _timerLabel.Text = "";
             _timerBar.Value = 0;
             _countdownTimer.Stop();
-            UpdateButtonStates(running: false);
+            UpdateButtonStates(RouletteState.Stopped);
             RefreshGameList();
         }
     }
@@ -249,6 +282,7 @@ public class MainForm : Form
     private void CountdownTick(object? s, EventArgs e)
     {
         if (_remainingSeconds > 0) _remainingSeconds--;
+        if (!_settings.ShowTimerInGui) return;
         int m = _remainingSeconds / 60, sec = _remainingSeconds % 60;
         _timerLabel.Text = $"Next switch in {m:D2}:{sec:D2}";
         _timerBar.Value = _totalSeconds > 0
@@ -269,7 +303,11 @@ public class MainForm : Form
         foreach (var file in dlg.FileNames)
         {
             var name = Path.GetFileNameWithoutExtension(file);
-            if (_settings.Games.Any(g => g.Path == file)) continue;
+            if (_settings.Games.Any(g => g.Path == file))
+            {
+                Log($"  Already in list: {name}");
+                continue;
+            }
             _settings.Games.Add(new GameEntry { Name = name, Path = file });
             Log($"  + Added: {name}");
         }
@@ -315,7 +353,7 @@ public class MainForm : Form
             ? Color.FromArgb(90, 90, 90)
             : (isCurrent ? Color.FromArgb(100, 220, 100) : Color.FromArgb(210, 210, 210));
 
-        string prefix = entry.Finished ? "✓ " : (isCurrent ? "▶ " : "  ");
+        string prefix = entry.Finished ? "x " : (isCurrent ? "▶ " : "  ");
         string label = $"{prefix}{entry.Name}  ({entry.PlayCount} plays)";
 
         using var brush = new SolidBrush(fg);
@@ -332,7 +370,7 @@ public class MainForm : Form
         foreach (var g in _settings.Games)
             _gameList.Items.Add(g);
         _gameList.EndUpdate();
-        _gameList.Invalidate();
+        _gameList.Refresh();
     }
 
     private void AppendLog(string msg)
@@ -343,18 +381,24 @@ public class MainForm : Form
 
     private void Log(string msg)
     {
+        _logBox.SelectionColor = _logBox.ForeColor;
         _logBox.AppendText($"[{DateTime.Now:HH:mm:ss}] {msg}\n");
         _logBox.ScrollToCaret();
     }
 
-    private void UpdateButtonStates(bool running)
+    private void UpdateButtonStates(RouletteState state)
     {
-        _startBtn.Enabled    = !running;
-        _stopBtn.Enabled     = running;
-        _skipBtn.Enabled     = running;
-        _doneBtn.Enabled     = running;
-        _addGameBtn.Enabled  = !running;
-        _removeGameBtn.Enabled = !running;
+        bool stopped = state == RouletteState.Stopped;
+        bool running = state == RouletteState.Running;
+        bool paused  = state == RouletteState.Paused;
+
+        _startBtn.Text     = stopped ? "▶  Start" : (running ? "Pause" : "▶  Resume");
+        _startBtn.Enabled  = true;
+        _stopBtn.Enabled   = !stopped;
+        _skipBtn.Enabled   = running || paused;
+        _doneBtn.Enabled   = running || paused;
+        _addGameBtn.Enabled    = stopped || paused;
+        _removeGameBtn.Enabled = stopped || paused;
     }
 
     private static Label SectionLabel(string text) => new()

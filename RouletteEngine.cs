@@ -11,11 +11,16 @@ public class RouletteEngine
     private readonly Action<string> _log;
     private readonly Action<GameEntry?, int, RouletteState> _onStateChanged;
 
-    private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _outerCts;  // cancelled by StopAsync only
+    private CancellationTokenSource? _cts;        // cancelled by ForceSkip / Pause
     private Task? _runTask;
     private Process? _dolphinProcess;
     private string? _lastGameName;
     private GameEntry? _currentGame;
+
+    private volatile bool _pauseRequested = false;
+    private volatile bool _resumeRequested = false;
+    private TaskCompletionSource? _resumeTcs;
 
     public RouletteState State { get; private set; } = RouletteState.Stopped;
     public GameEntry? CurrentGame => _currentGame;
@@ -34,23 +39,43 @@ public class RouletteEngine
 
     public void Start()
     {
-        if (State == RouletteState.Running) return;
-        _cts = new CancellationTokenSource();
+        if (State != RouletteState.Stopped) return;
+        _outerCts = new CancellationTokenSource();
+        _cts = _outerCts;
         State = RouletteState.Running;
-        _runTask = Task.Run(() => RunLoop(_cts.Token));
+        _runTask = Task.Run(() => RunLoop(_outerCts.Token));
     }
 
     public async Task StopAsync()
     {
         if (State == RouletteState.Stopped) return;
-        _cts?.Cancel();
+        _outerCts?.Cancel();
+        _resumeTcs?.TrySetResult(); // unblock if paused
         if (_runTask != null) await _runTask;
         State = RouletteState.Stopped;
         NotifyStateChanged(0);
     }
 
+    public void Pause()
+    {
+        if (State != RouletteState.Running) return;
+        _pauseRequested = true;
+        _cts?.Cancel();
+    }
+
+    public void Resume()
+    {
+        if (State != RouletteState.Paused) return;
+        _resumeRequested = true;
+        _resumeTcs?.TrySetResult();
+    }
+
     /// <summary>Forces an immediate switch to the next game (saves first).</summary>
-    public void ForceSkip() => _cts?.Cancel(); // RunLoop catches this and restarts
+    public void ForceSkip()
+    {
+        _cts?.Cancel();
+        _resumeTcs?.TrySetResult(); // wake up if paused; resumeRequested=false → inner loop breaks
+    }
 
     /// <summary>Marks the current game finished and removes it from future rotation.</summary>
     public void MarkCurrentDone()
@@ -58,7 +83,7 @@ public class RouletteEngine
         if (_currentGame == null) return;
         _currentGame.Finished = true;
         _settings.Save();
-        _log($"  ✓ '{_currentGame.Name}' marked as finished and removed from rotation.");
+        _log($"  '{_currentGame.Name}' marked as finished and removed from rotation.");
         ForceSkip();
     }
 
@@ -80,19 +105,17 @@ public class RouletteEngine
                 return;
             }
 
-            // Pick next game with inverse-frequency weighting, never repeating last
             var next = PickNext(available);
             _currentGame = next;
             _lastGameName = next.Name;
 
             int playSeconds = _rng.Next(_settings.MinPlaySeconds, _settings.MaxPlaySeconds + 1);
             _log($"\n{'═',50}".Replace(" ", "═"));
-            _log($"  🎲  Selected : {next.Name}");
-            _log($"  ⏱   Play time: {FormatTime(playSeconds)}");
+            _log($"  Selected : {next.Name}");
+            _log($"  Play time: {FormatTime(playSeconds)}");
 
             NotifyStateChanged(playSeconds);
 
-            // Launch Dolphin
             _log($"  Launching Dolphin with: {next.Path}");
             _dolphinProcess = LaunchDolphin(next.Path);
 
@@ -104,31 +127,55 @@ public class RouletteEngine
                 return;
             }
 
-            // Wait for Dolphin to start, then load savestate
-            await Task.Delay(1000 + _settings.GracePeriodMs, CancellationToken.None);
+            await Task.Delay(_settings.GracePeriodMs, CancellationToken.None);
             _log($"  Loading savestate slot {_settings.SavestateSlot}…");
             DolphinHotkeys.LoadState(_settings.SavestateSlot, _log);
 
-            // Update play count
             next.PlayCount++;
             _settings.Save();
 
-            // Inner loop: use a local CTS so ForceSkip/MarkDone can cancel just this turn
-            using var innerCts = CancellationTokenSource.CreateLinkedTokenSource(outerToken);
-            _cts = innerCts; // re-point so ForceSkip cancels the inner one
-
-            try
+            // Inner wait loop — handles pause/resume for current game
+            while (true)
             {
-                await Task.Delay(playSeconds * 1000, innerCts.Token);
-            }
-            catch (TaskCanceledException) { /* expected on skip/done/stop */ }
+                using var innerCts = CancellationTokenSource.CreateLinkedTokenSource(outerToken);
+                _cts = innerCts;
 
-            // Save state (unless game was marked done)
+                try { await Task.Delay(playSeconds * 1000, innerCts.Token); }
+                catch (TaskCanceledException) { }
+
+                if (!_pauseRequested || outerToken.IsCancellationRequested) break;
+
+                // ── Paused ────────────────────────────────────────────
+                _pauseRequested = false;
+                State = RouletteState.Paused;
+                NotifyStateChanged(0);
+                _log($"  Paused — Dolphin still running.");
+
+                _resumeTcs = new TaskCompletionSource();
+                try { await _resumeTcs.Task.WaitAsync(outerToken); }
+                catch (OperationCanceledException) { break; }
+
+                bool resuming = _resumeRequested;
+                _resumeRequested = false;
+
+                if (!resuming)
+                {
+                    State = RouletteState.Running; // woken by Skip/Done, not Resume
+                    break;
+                }
+
+                // ── Resumed ───────────────────────────────────────────
+                playSeconds = _rng.Next(_settings.MinPlaySeconds, _settings.MaxPlaySeconds + 1);
+                _log($"  ▶  Resumed '{next.Name}' — new play time: {FormatTime(playSeconds)}");
+                State = RouletteState.Running;
+                NotifyStateChanged(playSeconds);
+            }
+
             if (!next.Finished)
             {
-                _log($"\n  ⏳  Saving state for '{next.Name}'…");
+                _log($"\n  Saving state for '{next.Name}'…");
                 DolphinHotkeys.SaveState(_settings.SavestateSlot, _log);
-                await Task.Delay(_settings.GracePeriodMs, CancellationToken.None);
+                await Task.Delay(500, CancellationToken.None);
             }
             else
             {
