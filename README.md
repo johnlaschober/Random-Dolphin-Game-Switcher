@@ -27,11 +27,7 @@ requires the following Dolphin configuration — set these once:
 - **Pause on Focus Loss** — **ON**.
 
 **Options → Configuration → GameCube**
-- **Memory card** → set both slots to **Memory Card** (the raw `.raw` card), not
-  GCI Folder. In practice this behaves better with two instances running.
-
-Dolphin must also allow a **second instance** to launch (the default — no extra
-setting, just confirm a second Dolphin window opens without a lock dialog).
+- **Memory card** → set both slots to **Memory Card**.
 
 ---
 
