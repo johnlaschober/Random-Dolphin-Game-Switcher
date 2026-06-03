@@ -29,6 +29,11 @@ requires the following Dolphin configuration — set these once:
 **Options → Configuration → GameCube**
 - **Memory card** → set both slots to **Memory Card**.
 
+**Options → Hotkey Settings → Save and Load State**
+- **Save State Slot 1** → set to **Shift + F1**.
+- **Load State Slot 1** → set to **F1**.
+- If you use a different **Savestate slot** in the app, set Save/Load for that slot the same way (Save = Shift + F*N*, Load = F*N*).
+
 ---
 
 ## Usage
