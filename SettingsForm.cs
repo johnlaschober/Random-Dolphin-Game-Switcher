@@ -71,7 +71,7 @@ public class SettingsForm : Form
         var minLbl = Label("Min play time (seconds)");
         tip.SetToolTip(minLbl, "Minimum time (seconds) spent on each game before switching.");
         layout.Controls.Add(minLbl, 0, 2);
-        _minNum = DarkNumeric(1, 9999);
+        _minNum = DarkNumeric(RouletteEngine.PrebootLeadSeconds, 9999);
         tip.SetToolTip(_minNum, "Minimum time (seconds) spent on each game before switching.");
         layout.Controls.Add(_minNum, 1, 2);
         layout.SetColumnSpan(_minNum, 2);
@@ -139,6 +139,14 @@ public class SettingsForm : Form
 
     private void Save(object? s, EventArgs e)
     {
+        if ((int)_minNum.Value < RouletteEngine.PrebootLeadSeconds)
+        {
+            MessageBox.Show(
+                $"Min play time must be at least {RouletteEngine.PrebootLeadSeconds} seconds " +
+                "so the next game can pre-boot before each switch.",
+                "Validation", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
         if ((int)_minNum.Value >= (int)_maxNum.Value)
         {
             MessageBox.Show("Min play time must be less than max play time.",

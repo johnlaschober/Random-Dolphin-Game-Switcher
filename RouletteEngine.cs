@@ -6,6 +6,12 @@ public enum RouletteState { Stopped, Running, Paused }
 
 public class RouletteEngine
 {
+    /// <summary>How many seconds before a swap the next game's buffer is pre-booted.
+    /// Booting this late (instead of at the start of the turn) keeps a second
+    /// Dolphin from sitting open — and bleeding audio — for the whole turn.
+    /// MinPlaySeconds is floored to this so the lead window always fits.</summary>
+    public const int PrebootLeadSeconds = 5;
+
     private readonly AppSettings _settings;
     private readonly Random _rng = new();
     private readonly Action<string> _log;
@@ -108,7 +114,6 @@ public class RouletteEngine
 
             BecomeCurrent(first, out int playSeconds);
             LoadCurrent();
-            PrebootNext();
 
             // ── Main loop ─────────────────────────────────────────────
             while (!outerToken.IsCancellationRequested)
@@ -192,8 +197,6 @@ public class RouletteEngine
                 BecomeCurrent(nextGame, out playSeconds);
                 LoadCurrent();
                 KillProcess(ref outgoing);
-
-                PrebootNext();
             }
         }
         finally
@@ -217,7 +220,7 @@ public class RouletteEngine
             using var innerCts = CancellationTokenSource.CreateLinkedTokenSource(outerToken);
             _cts = innerCts;
 
-            try { await Task.Delay(playSeconds * 1000, innerCts.Token); }
+            try { await PlayDelayAsync(playSeconds, innerCts.Token); }
             catch (TaskCanceledException) { }
 
             if (!_pauseRequested || outerToken.IsCancellationRequested) return;
@@ -243,6 +246,24 @@ public class RouletteEngine
             State = RouletteState.Running;
             NotifyStateChanged(playSeconds);
         }
+    }
+
+    /// <summary>Delays for the play period, pre-booting the next game's buffer
+    /// only once the lead window (<see cref="PrebootLeadSeconds"/>) remains.
+    /// Cancelling (Skip/Done/Pause/Stop) before the lead window means no buffer
+    /// was booted — the swap then falls back to a synchronous launch.</summary>
+    private async Task PlayDelayAsync(int playSeconds, CancellationToken token)
+    {
+        int lead = Math.Min(PrebootLeadSeconds, playSeconds);
+        int solo = playSeconds - lead;
+
+        if (solo > 0)
+            await Task.Delay(solo * 1000, token);
+
+        PrebootNext();
+
+        if (lead > 0)
+            await Task.Delay(lead * 1000, token);
     }
 
     // ── Turn helpers ────────────────────────────────────────────────────
@@ -295,6 +316,10 @@ public class RouletteEngine
     /// would have to be the same game, which would clash on its savestate).</summary>
     private void PrebootNext()
     {
+        // Already have a live buffer (e.g. pause/resume re-entered the wait) —
+        // keep it instead of leaking a second instance.
+        if (_next is { HasExited: false }) return;
+
         var avail = Rotation();
         if (avail.Count < 2) { _next = null; _nextGame = null; return; }
 
