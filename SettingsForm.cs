@@ -23,7 +23,7 @@ public class SettingsForm : Form
     private void BuildUI()
     {
         Text = "Settings";
-        Size = new Size(480, 290);
+        Size = new Size(480, 330);
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
@@ -31,6 +31,8 @@ public class SettingsForm : Form
         BackColor = Color.FromArgb(30, 30, 30);
         ForeColor = Color.FromArgb(220, 220, 220);
         Font = new Font("Segoe UI", 9.5f);
+
+        var tip = new ToolTip { AutoPopDelay = 8000, InitialDelay = 400, ReshowDelay = 200 };
 
         var layout = new TableLayoutPanel
         {
@@ -40,38 +42,54 @@ public class SettingsForm : Form
             RowCount = 6,
             AutoSize = true,
         };
-        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 180));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
 
         // Dolphin path
-        layout.Controls.Add(Label("Dolphin.exe path"), 0, 0);
-        _dolphinPathBox = DarkTextBox(); layout.Controls.Add(_dolphinPathBox, 1, 0);
+        var dolphinLbl = Label("Dolphin.exe path");
+        tip.SetToolTip(dolphinLbl, "Full path to Dolphin.exe on your machine.");
+        layout.Controls.Add(dolphinLbl, 0, 0);
+        _dolphinPathBox = DarkTextBox();
+        tip.SetToolTip(_dolphinPathBox, "Full path to Dolphin.exe on your machine.");
+        layout.Controls.Add(_dolphinPathBox, 1, 0);
         _browseBtn = SmallButton("Browse…");
         _browseBtn.Click += BrowseDolphin;
         layout.Controls.Add(_browseBtn, 2, 0);
 
         // Savestate slot
-        layout.Controls.Add(Label("Savestate slot (1–8)"), 0, 1);
+        var slotLbl = Label("Savestate slot (1–8)");
+        tip.SetToolTip(slotLbl, "Which savestate slot to load from and save to.\nMust match the slot you saved manually before starting.");
+        layout.Controls.Add(slotLbl, 0, 1);
         _slotNum = DarkNumeric(1, 8);
+        tip.SetToolTip(_slotNum, "Which savestate slot to load from and save to.\nMust match the slot you saved manually before starting.");
         layout.Controls.Add(_slotNum, 1, 1);
         layout.SetColumnSpan(_slotNum, 2);
 
         // Min play time
-        layout.Controls.Add(Label("Min play time (seconds)"), 0, 2);
+        var minLbl = Label("Min play time (seconds)");
+        tip.SetToolTip(minLbl, "Minimum time (seconds) spent on each game before switching.");
+        layout.Controls.Add(minLbl, 0, 2);
         _minNum = DarkNumeric(1, 9999);
+        tip.SetToolTip(_minNum, "Minimum time (seconds) spent on each game before switching.");
         layout.Controls.Add(_minNum, 1, 2);
         layout.SetColumnSpan(_minNum, 2);
 
         // Max play time
-        layout.Controls.Add(Label("Max play time (seconds)"), 0, 3);
+        var maxLbl = Label("Max play time (seconds)");
+        tip.SetToolTip(maxLbl, "Maximum time (seconds) spent on each game before switching.");
+        layout.Controls.Add(maxLbl, 0, 3);
         _maxNum = DarkNumeric(1, 9999);
+        tip.SetToolTip(_maxNum, "Maximum time (seconds) spent on each game before switching.");
         layout.Controls.Add(_maxNum, 1, 3);
         layout.SetColumnSpan(_maxNum, 2);
 
         // Grace period
-        layout.Controls.Add(Label("Grace period (seconds)"), 0, 4);
-        _graceNum = DarkNumeric(1, 30);
+        var graceLbl = Label("Dolphin grace period (ms)");
+        tip.SetToolTip(graceLbl, "Milliseconds to wait after sending a savestate hotkey.\nIncrease on slower machines if saves or loads are missed.");
+        layout.Controls.Add(graceLbl, 0, 4);
+        _graceNum = DarkNumeric(0, 10000);
+        tip.SetToolTip(_graceNum, "Milliseconds to wait after sending a savestate hotkey.\nIncrease on slower machines if saves or loads are missed.");
         layout.Controls.Add(_graceNum, 1, 4);
         layout.SetColumnSpan(_graceNum, 2);
 
@@ -101,7 +119,7 @@ public class SettingsForm : Form
         _slotNum.Value = _settings.SavestateSlot;
         _minNum.Value = _settings.MinPlaySeconds;
         _maxNum.Value = _settings.MaxPlaySeconds;
-        _graceNum.Value = _settings.GracePeriodSeconds;
+        _graceNum.Value = _settings.GracePeriodMs;
     }
 
     private void Save(object? s, EventArgs e)
@@ -116,7 +134,7 @@ public class SettingsForm : Form
         _settings.SavestateSlot = (int)_slotNum.Value;
         _settings.MinPlaySeconds = (int)_minNum.Value;
         _settings.MaxPlaySeconds = (int)_maxNum.Value;
-        _settings.GracePeriodSeconds = (int)_graceNum.Value;
+        _settings.GracePeriodMs = (int)_graceNum.Value;
         _settings.Save();
         DialogResult = DialogResult.OK;
         Close();

@@ -9,6 +9,8 @@
     <AssemblyName>DolphinRoulette</AssemblyName>
     <RootNamespace>DolphinRoulette</RootNamespace>
     <ApplicationIcon>dolphin.ico</ApplicationIcon>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
   </PropertyGroup>
 
 </Project>

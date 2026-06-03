@@ -20,12 +20,12 @@ automatically saving and loading savestates between switches.
 
 | Button | What it does |
 |--------|-------------|
-| **+ Add** | Browse for ISO/RVZ/GCZ files to add to the rotation |
+| **+ Add ISO** | Browse for ISO/RVZ/GCZ files to add to the rotation |
 | **− Remove** | Remove selected game from the list entirely |
 | **▶ Start** | Begin the roulette |
 | **■ Stop** | Save current game state and stop |
 | **⏭ Skip** | Save current state and jump to the next game now |
-| **✓ Done** | Mark current game as finished — removes it from rotation (no save) |
+| **✓ Completed** | Mark current game as finished — removes it from rotation (no save) |
 
 ---
 
@@ -42,27 +42,26 @@ Play counts survive restarts (stored in `roulette_settings.json` next to the exe
 
 - Savestate hotkeys (F1 / Shift+F1) are sent via `SendKeys` which briefly brings
   Dolphin to the foreground. Avoid clicking during the grace period.
-- Grace period (default 3 seconds) is the wait after sending a hotkey before
+- Dolphin grace period (default 500 ms) is the wait after sending a hotkey before
   killing/switching. Increase it on slower machines in Settings.
 
 
 ## Building
 
 ### Prerequisites
-- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (only needed to BUILD — not needed to RUN)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8) (to build)
+- [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8) (to run — must be installed on the target machine)
 
-### Build a self-contained exe (recommended for distribution)
+### Build
 
 ```
-dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
+dotnet publish -c Release -r win-x64
 ```
 
 The output exe will be in:
 ```
 bin\Release\net8.0-windows\win-x64\publish\DolphinRoulette.exe
 ```
-
-That single file is everything — send it to whoever needs it.
 
 ### Run locally during development
 

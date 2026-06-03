@@ -26,6 +26,7 @@ public class MainForm : Form
     public MainForm()
     {
         _settings = AppSettings.Load();
+        Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         BuildUI();
         RefreshGameList();
         UpdateButtonStates(running: false);
@@ -124,7 +125,7 @@ public class MainForm : Form
             BackColor = Color.Transparent,
             Padding = new Padding(0, 4, 0, 0),
         };
-        _addGameBtn = SmallBtn("+ Add");
+        _addGameBtn = SmallBtn("+ Add ISO");
         _addGameBtn.Click += AddGame;
         _removeGameBtn = SmallBtn("− Remove");
         _removeGameBtn.Click += RemoveGame;
@@ -156,6 +157,7 @@ public class MainForm : Form
             Dock = DockStyle.Bottom,
             Height = 44,
             FlowDirection = FlowDirection.LeftToRight,
+            WrapContents = false,
             BackColor = Color.Transparent,
             Padding = new Padding(0, 6, 0, 0),
         };
@@ -163,7 +165,8 @@ public class MainForm : Form
         _startBtn    = AccentBtn("▶  Start",   Color.FromArgb(0, 140, 80));
         _stopBtn     = AccentBtn("■  Stop",    Color.FromArgb(160, 40, 40));
         _skipBtn     = AccentBtn("⏭  Skip",    Color.FromArgb(60, 90, 140));
-        _doneBtn     = AccentBtn("✓  Done",    Color.FromArgb(120, 80, 0));
+        _doneBtn     = AccentBtn("✓  Completed", Color.FromArgb(120, 80, 0));
+        _doneBtn.Width = 130;
         _settingsBtn = AccentBtn("⚙  Settings", Color.FromArgb(55, 55, 65));
 
         _startBtn.Click    += StartRoulette;
@@ -381,7 +384,7 @@ public class MainForm : Form
     private static Button AccentBtn(string text, Color bg) => new()
     {
         Text = text,
-        Width = 100,
+        Width = 90,
         Height = 30,
         FlatStyle = FlatStyle.Flat,
         BackColor = bg,

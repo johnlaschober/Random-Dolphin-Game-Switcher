@@ -105,7 +105,7 @@ public class RouletteEngine
             }
 
             // Wait for Dolphin to start, then load savestate
-            await Task.Delay((_settings.GracePeriodSeconds + 1) * 1000, CancellationToken.None);
+            await Task.Delay(1000 + _settings.GracePeriodMs, CancellationToken.None);
             _log($"  Loading savestate slot {_settings.SavestateSlot}…");
             DolphinHotkeys.LoadState(_settings.SavestateSlot, _log);
 
@@ -128,7 +128,7 @@ public class RouletteEngine
             {
                 _log($"\n  ⏳  Saving state for '{next.Name}'…");
                 DolphinHotkeys.SaveState(_settings.SavestateSlot, _log);
-                await Task.Delay(_settings.GracePeriodSeconds * 1000, CancellationToken.None);
+                await Task.Delay(_settings.GracePeriodMs, CancellationToken.None);
             }
             else
             {
