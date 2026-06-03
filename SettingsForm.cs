@@ -87,10 +87,10 @@ public class SettingsForm : Form
 
         // Grace period
         var graceLbl = Label("Dolphin boot wait (ms)");
-        tip.SetToolTip(graceLbl, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 3000).");
+        tip.SetToolTip(graceLbl, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 4500).");
         layout.Controls.Add(graceLbl, 0, 4);
         _graceNum = DarkNumeric(0, 30000);
-        tip.SetToolTip(_graceNum, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 3000).");
+        tip.SetToolTip(_graceNum, "Milliseconds to wait after launching Dolphin before sending the load-state hotkey.\nIncrease if Dolphin hasn't finished loading the game by the time the hotkey fires (default 4500).");
         layout.Controls.Add(_graceNum, 1, 4);
         layout.SetColumnSpan(_graceNum, 2);
 

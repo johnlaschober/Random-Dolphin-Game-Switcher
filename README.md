@@ -11,8 +11,8 @@ automatically saving and loading savestates between switches.
 2. Point **Dolphin.exe path** at your Dolphin installation
 3. Set **Savestate slot** — pick whichever slot you'll use (default: 1)
 4. Set your **Min/Max play time** in seconds
-5. Before starting the roulette, open each game in Dolphin and
-   **manually save a state to the configured slot** (Shift+F1 for slot 1)
+5. Open a game in Dolphin and adjust the window size...
+6. Optionally pre-setup some save states for each game ahead of time in savestate slot 1.
 
 ---
 
