@@ -23,11 +23,8 @@ next game in a second hidden Dolphin instance so switching is near-instant. That
 requires the following Dolphin configuration — set these once:
 
 **Options → Configuration → Interface**
-- **Confirm on Stop** — **OFF**. A stop-confirmation dialog would block the
-  auto-switch.
-- **Pause on Focus Loss** — **ON**. The pre-booted (background) instance must
-  auto-pause so it makes no sound and doesn't steal CPU/GPU from the game you're
-  playing. It auto-resumes when the app brings it to the foreground at swap time.
+- **Confirm on Stop** — **OFF**.
+- **Pause on Focus Loss** — **ON**.
 
 **Options → Configuration → GameCube**
 - **Memory card** → set both slots to **Memory Card** (the raw `.raw` card), not
